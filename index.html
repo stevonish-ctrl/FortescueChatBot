@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fortescue AI · Predictive Maintenance Investor Assistant</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --green: #00C853;
+    --green-dim: #00a844;
+    --green-glow: rgba(0,200,83,0.18);
+    --dark: #050c07;
+    --dark2: #0a140c;
+    --dark3: #111f14;
+    --dark4: #182a1c;
+    --mid: #1e3523;
+    --border: rgba(0,200,83,0.2);
+    --border-bright: rgba(0,200,83,0.5);
+    --text: #d4e8d4;
+    --text-dim: #7a9e7a;
+    --text-muted: #4a6a4a;
+    --white: #f0f8f0;
+    --red: #ff4444;
+    --amber: #ffb800;
+    --ore: #ff8c00;
+    --mono: 'JetBrains Mono', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; background: var(--dark); color: var(--text); font-family: 'DM Sans', sans-serif; font-weight: 300; overflow: hidden; }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0; opacity: 0.6;
+  }
+
+  .app {
+    position: relative; z-index: 1;
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    grid-template-rows: 64px 1fr;
+    height: 100vh;
+  }
+
+  /* TOPBAR */
+  .topbar {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(5,12,7,0.95);
+    backdrop-filter: blur(12px);
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-mark {
+    width: 32px; height: 32px; background: var(--green);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: var(--dark);
+    clip-path: polygon(0 0, 85% 0, 100% 15%, 100% 100%, 15% 100%, 0 85%);
+  }
+  .logo-text { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 2px; color: var(--white); }
+  .logo-text span { color: var(--green); }
+
+  .topbar-right { display: flex; align-items: center; gap: 10px; }
+
+  .status-pill {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--mono); font-size: 10px;
+    color: var(--green); letter-spacing: 1px;
+    border: 1px solid var(--border); border-radius: 20px;
+    padding: 4px 10px;
+  }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+
+  .mode-badge {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 1px;
+    border-radius: 20px; padding: 4px 10px;
+    border: 1px solid rgba(255,184,0,0.3);
+    color: var(--amber); background: rgba(255,184,0,0.07);
+  }
+
+  /* SIDEBAR */
+  .sidebar { border-right: 1px solid var(--border); background: var(--dark2); display: flex; flex-direction: column; overflow: hidden; }
+  .sidebar-section { padding: 20px; border-bottom: 1px solid var(--border); }
+  .sidebar-label { font-family: var(--mono); font-size: 9px; letter-spacing: 2px; color: var(--text-muted); text-transform: uppercase; margin-bottom: 12px; }
+
+  /* ASSET SIMULATOR */
+  .asset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+  .asset-btn {
+    background: var(--dark3); border: 1px solid var(--border); color: var(--text-dim);
+    font-family: var(--mono); font-size: 10px; padding: 8px 6px; border-radius: 4px;
+    cursor: pointer; text-align: center; transition: all 0.2s;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .asset-btn:hover { border-color: var(--green); color: var(--green); background: var(--green-glow); }
+  .asset-btn.active { border-color: var(--green); color: var(--green); background: var(--green-glow); }
+  .asset-btn .icon { font-size: 16px; }
+
+  .risk-display { background: var(--dark3); border: 1px solid var(--border); border-radius: 6px; padding: 14px; display: none; }
+  .risk-display.visible { display: block; }
+  .risk-asset-name { font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: 1px; color: var(--white); margin-bottom: 10px; }
+  .risk-bar-wrap { margin-bottom: 10px; }
+  .risk-bar-label { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; color: var(--text-muted); margin-bottom: 5px; }
+  .risk-bar-label .val { color: var(--white); font-weight: 500; }
+  .risk-bar-track { height: 6px; background: var(--dark4); border-radius: 3px; overflow: hidden; }
+  .risk-bar-fill { height: 100%; border-radius: 3px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+  .risk-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .risk-meta-item { background: var(--dark4); border-radius: 4px; padding: 8px; }
+  .risk-meta-item .rmi-label { font-family: var(--mono); font-size: 9px; color: var(--text-muted); margin-bottom: 3px; }
+  .risk-meta-item .rmi-val { font-family: var(--mono); font-size: 11px; color: var(--white); }
+  .risk-action { margin-top: 10px; padding: 8px 10px; border-radius: 4px; font-family: var(--mono); font-size: 10px; border-left: 3px solid; line-height: 1.5; }
+
+  /* QUICK PROMPTS */
+  .quick-prompts { display: flex; flex-direction: column; gap: 4px; }
+  .qp-btn {
+    background: transparent; border: 1px solid var(--border); color: var(--text-dim);
+    font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 300;
+    padding: 7px 10px; border-radius: 4px; cursor: pointer; text-align: left; transition: all 0.15s;
+  }
+  .qp-btn:hover { border-color: var(--border-bright); color: var(--white); background: var(--green-glow); }
+
+  /* OBJECTIVES */
+  .objectives { display: flex; flex-direction: column; gap: 6px; flex: 1; overflow-y: auto; padding: 20px; }
+  .obj-item { display: flex; align-items: flex-start; gap: 10px; }
+  .obj-icon { font-size: 14px; margin-top: 1px; flex-shrink: 0; }
+  .obj-text { font-size: 11px; line-height: 1.5; color: var(--text-dim); }
+  .obj-text strong { color: var(--green); font-weight: 600; }
+
+  /* MAIN CHAT */
+  .main { display: flex; flex-direction: column; background: var(--dark); overflow: hidden; }
+  .chat-messages {
+    flex: 1; overflow-y: auto; padding: 28px 32px;
+    display: flex; flex-direction: column; gap: 20px; scroll-behavior: smooth;
+  }
+  .chat-messages::-webkit-scrollbar { width: 4px; }
+  .chat-messages::-webkit-scrollbar-thumb { background: var(--mid); border-radius: 2px; }
+
+  .welcome { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; flex: 1; padding: 40px; gap: 16px; }
+  .welcome-icon { width: 64px; height: 64px; background: linear-gradient(135deg, var(--green), var(--green-dim)); clip-path: polygon(0 0, 85% 0, 100% 15%, 100% 100%, 15% 100%, 0 85%); display: flex; align-items: center; justify-content: center; font-size: 28px; }
+  .welcome h2 { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 3px; color: var(--white); }
+  .welcome p { font-size: 14px; color: var(--text-dim); max-width: 440px; line-height: 1.6; }
+
+  /* MESSAGES */
+  .msg { display: flex; gap: 12px; animation: msgIn 0.3s ease; max-width: 860px; }
+  @keyframes msgIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+  .msg.user { flex-direction: row-reverse; align-self: flex-end; }
+  .msg.user .msg-bubble { background: var(--mid); border: 1px solid var(--border-bright); border-radius: 16px 4px 16px 16px; }
+  .msg.bot .msg-bubble { background: var(--dark3); border: 1px solid var(--border); border-radius: 4px 16px 16px 16px; }
+  .msg-avatar { width: 32px; height: 32px; flex-shrink: 0; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'Bebas Neue', sans-serif; font-size: 14px; margin-top: 4px; }
+  .msg.bot .msg-avatar { background: var(--green); color: var(--dark); clip-path: polygon(0 0, 80% 0, 100% 20%, 100% 100%, 20% 100%, 0 80%); }
+  .msg.user .msg-avatar { background: var(--mid); border: 1px solid var(--border-bright); color: var(--green); font-size: 12px; }
+  .msg-bubble { padding: 14px 18px; max-width: 680px; }
+  .msg-bubble p { font-size: 13.5px; line-height: 1.75; color: var(--text); margin-bottom: 8px; }
+  .msg-bubble p:last-child { margin-bottom: 0; }
+  .msg-bubble strong { color: var(--white); font-weight: 600; }
+  .msg-bubble a { color: var(--green); text-decoration: underline; word-break: break-all; }
+  .msg-bubble a:hover { color: #00e564; }
+  .msg-bubble ul { margin: 8px 0 8px 16px; }
+  .msg-bubble li { font-size: 13.5px; line-height: 1.7; color: var(--text); margin-bottom: 4px; }
+  .msg-bubble .tag {
+    display: inline-block; font-family: var(--mono); font-size: 11px;
+    padding: 2px 8px; border-radius: 4px;
+    background: rgba(0,200,83,0.1); color: var(--green);
+    border: 1px solid rgba(0,200,83,0.25); margin: 2px 2px 2px 0;
+  }
+  .msg-bubble .suggestions { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+  .msg-bubble .suggest-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--green); cursor: pointer;
+    padding: 6px 12px; border-radius: 6px;
+    background: rgba(0,200,83,0.08); border: 1px solid rgba(0,200,83,0.25);
+    transition: background 0.15s; width: fit-content; font-family: 'DM Sans', sans-serif;
+  }
+  .msg-bubble .suggest-chip:hover { background: rgba(0,200,83,0.18); }
+  .msg-meta { font-family: var(--mono); font-size: 9px; color: var(--text-muted); margin-top: 6px; letter-spacing: 0.5px; }
+
+  /* TYPING */
+  .typing-indicator { display: flex; gap: 12px; align-items: center; animation: msgIn 0.3s ease; }
+  .typing-avatar { width: 32px; height: 32px; background: var(--green); color: var(--dark); font-family: 'Bebas Neue', sans-serif; font-size: 14px; clip-path: polygon(0 0, 80% 0, 100% 20%, 100% 100%, 20% 100%, 0 80%); display: flex; align-items: center; justify-content: center; }
+  .typing-dots { background: var(--dark3); border: 1px solid var(--border); border-radius: 4px 16px 16px 16px; padding: 14px 18px; display: flex; gap: 5px; align-items: center; }
+  .typing-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: dotBounce 1.2s ease-in-out infinite; }
+  .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes dotBounce { 0%,80%,100%{transform:translateY(0);opacity:0.4} 40%{transform:translateY(-6px);opacity:1} }
+
+  /* INPUT */
+  .chat-input-wrap { padding: 20px 32px 24px; border-top: 1px solid var(--border); background: rgba(5,12,7,0.8); backdrop-filter: blur(8px); }
+  .chat-input-inner { display: flex; gap: 10px; align-items: flex-end; background: var(--dark3); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; transition: border-color 0.2s; }
+  .chat-input-inner:focus-within { border-color: var(--border-bright); }
+  #chatInput { flex: 1; background: transparent; border: none; outline: none; color: var(--white); font-family: 'DM Sans', sans-serif; font-size: 13.5px; font-weight: 300; resize: none; max-height: 120px; line-height: 1.6; }
+  #chatInput::placeholder { color: var(--text-muted); }
+  .send-btn { width: 36px; height: 36px; flex-shrink: 0; background: var(--green); border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; color: var(--dark); }
+  .send-btn:hover { background: #00e564; transform: scale(1.05); }
+  .send-btn svg { width: 16px; height: 16px; }
+  .input-hint { font-family: var(--mono); font-size: 10px; color: var(--text-muted); text-align: center; margin-top: 10px; }
+  .input-hint span { color: var(--text-dim); }
+
+  .disclaimer { padding: 6px 20px; background: rgba(255,184,0,0.05); border-bottom: 1px solid rgba(255,184,0,0.15); font-family: var(--mono); font-size: 9px; letter-spacing: 0.5px; color: rgba(255,184,0,0.6); text-align: center; }
+
+  .sidebar::-webkit-scrollbar { width: 3px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--mid); }
+
+  @media (max-width: 768px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: 64px auto 1fr; }
+    .sidebar { grid-row: 2; border-right: none; border-bottom: 1px solid var(--border); max-height: 280px; overflow-y: auto; }
+    .chat-messages { padding: 16px; }
+    .chat-input-wrap { padding: 12px 16px 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="logo">
+      <div class="logo-mark">F</div>
+      <div class="logo-text">FORTESCUE <span>AI</span></div>
+    </div>
+    <div class="topbar-right">
+      <div class="mode-badge" id="modeBadge">○ LOCAL MODE</div>
+      <div class="status-pill">
+        <div class="status-dot"></div>
+        INTENT ENGINE · ACTIVE
+      </div>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Equipment Risk Simulator</div>
+      <div class="asset-grid">
+        <button class="asset-btn" onclick="selectAsset('haul-truck')" id="btn-haul-truck"><span class="icon">🚛</span>Haul Truck</button>
+        <button class="asset-btn" onclick="selectAsset('conveyor')" id="btn-conveyor"><span class="icon">🏭</span>Conveyor</button>
+        <button class="asset-btn" onclick="selectAsset('rail')" id="btn-rail"><span class="icon">🚂</span>Rail Asset</button>
+        <button class="asset-btn" onclick="selectAsset('fixed-plant')" id="btn-fixed-plant"><span class="icon">⚙️</span>Fixed Plant</button>
+      </div>
+      <div class="risk-display" id="riskDisplay"></div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Quick Questions</div>
+      <div class="quick-prompts">
+        <button class="qp-btn" onclick="sendQuick('What problem does this AI system solve?')">⚡ What problem does this solve?</button>
+        <button class="qp-btn" onclick="sendQuick('How does predictive maintenance work?')">🔧 How does predictive maintenance work?</button>
+        <button class="qp-btn" onclick="sendQuick('How does this benefit investors?')">📈 How does this benefit investors?</button>
+        <button class="qp-btn" onclick="sendQuick('How does this support sustainability and ESG?')">🌱 Sustainability & ESG</button>
+        <button class="qp-btn" onclick="sendQuick('What are the risks and limitations?')">⚠️ Risks & Limitations</button>
+        <button class="qp-btn" onclick="sendQuick('How does the failure risk score work?')">🎯 How does the risk score work?</button>
+        <button class="qp-btn" onclick="sendQuick('Where can I find the latest Fortescue reports?')">📄 Find current reports</button>
+      </div>
+    </div>
+
+    <div class="objectives">
+      <div class="sidebar-label">System Objectives</div>
+      <div class="obj-item"><div class="obj-icon">📉</div><div class="obj-text">Reduce unplanned downtime by <strong>≥10%</strong> within 12 months across priority assets</div></div>
+      <div class="obj-item"><div class="obj-icon">🧠</div><div class="obj-text">AI decision-support via <strong>Azure ML + IoT Hub</strong>. Human engineers retain final authority</div></div>
+      <div class="obj-item"><div class="obj-icon">♻️</div><div class="obj-text">Fewer emergency runs means <strong>↓ CO₂</strong> per tonne moved — tied to Real Zero 2030</div></div>
+      <div class="obj-item"><div class="obj-icon">🛡️</div><div class="obj-text"><strong>Prototype only.</strong> Simulated data. Not connected to live Fortescue systems.</div></div>
+    </div>
+  </aside>
+
+  <!-- MAIN CHAT -->
+  <main class="main">
+    <div class="disclaimer">PROTOTYPE · SIMULATION ONLY · NOT CONNECTED TO FORTESCUE LIVE SYSTEMS · FOR ACADEMIC & DEMONSTRATION PURPOSES</div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="welcome" id="welcomeState">
+        <div class="welcome-icon">⚡</div>
+        <h2>FORTESCUE AI ASSISTANT</h2>
+        <p>Ask about our Predictive Maintenance platform, investment case, Real Zero strategy, sustainability reports, or the Equipment Risk Simulator.</p>
+      </div>
+    </div>
+    <div class="chat-input-wrap">
+      <div class="chat-input-inner">
+        <textarea id="chatInput" placeholder="Ask about predictive maintenance, investor outcomes, Real Zero..." rows="1" oninput="autoResize(this)" onkeydown="handleKey(event)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </div>
+      <div class="input-hint">Press <span>Enter</span> to send · <span>Shift+Enter</span> for new line</div>
+    </div>
+  </main>
+
+</div>
+
+<script>
+// ============================================================
+// INTENT KNOWLEDGE BASE — keyword engine, no API required
+// ============================================================
+const INTENTS = [
+  {
+    id: 'problem',
+    label: 'Problem / Pain Point',
+    keywords: ['problem','solve','issue','challenge','unplanned','downtime','breakdown','failure','outage','disruption','why needed','purpose'],
+    response: () => `
+      <strong>The Core Problem Fortescue Faces</strong>
+      <p>Fortescue's biggest operational challenge is <strong>unplanned equipment downtime</strong> — when haul trucks, conveyors, rail assets, or fixed plant fail without warning, operations halt and revenue is lost immediately.</p>
+      <p>Traditional maintenance approaches are either:</p>
+      <ul>
+        <li><strong>Reactive</strong> — fix it after it breaks (costly, risky, unpredictable)</li>
+        <li><strong>Scheduled</strong> — service on a calendar regardless of actual condition (often wasteful)</li>
+      </ul>
+      <p>This AI system shifts Fortescue to <strong>predictive maintenance</strong> — anticipating failures before they happen using real-time sensor data and machine learning. The primary target: reduce unplanned downtime by at least <strong>10% within 12 months</strong>.</p>
+    `
+  },
+  {
+    id: 'how_works',
+    label: 'How It Works / Process',
+    keywords: ['how does','how it works','process','steps','workflow','explain','what is predictive','pipeline','stages','work','mechanism'],
+    response: () => `
+      <strong>How Predictive Maintenance Works</strong>
+      <p>The AI system follows a five-stage pipeline:</p>
+      <ul>
+        <li><span class="tag">1. Ingest</span> Sensor data streams in real time from equipment via Azure IoT Hub.</li>
+        <li><span class="tag">2. Analyse</span> Azure ML models detect anomalies by comparing readings against healthy baselines.</li>
+        <li><span class="tag">3. Score</span> A Failure Risk Score (0–100) is calculated per asset, updated each shift.</li>
+        <li><span class="tag">4. Alert</span> Maintenance planners receive automated alerts with recommended intervention windows.</li>
+        <li><span class="tag">5. Decide</span> Human engineers review AI insights and authorise any maintenance action.</li>
+      </ul>
+      <p>The AI accelerates decision-making — it never replaces expert human authority.</p>
+    `
+  },
+  {
+    id: 'data',
+    label: 'Data Sources / Inputs',
+    keywords: ['data','sensor','vibration','temperature','pressure','maintenance log','input','iot','reading','technician','sources'],
+    response: () => `
+      <strong>Data Sources Used by the AI System</strong>
+      <p>The platform ingests data from multiple sources to build a complete picture of each asset's health:</p>
+      <ul>
+        <li><strong>Equipment sensors</strong> — real-time IoT readings from on-board hardware</li>
+        <li><strong>Vibration readings</strong> — early indicator of mechanical wear or imbalance</li>
+        <li><strong>Temperature readings</strong> — engine, hydraulic, and bearing heat patterns</li>
+        <li><strong>Pressure readings</strong> — hydraulic and pneumatic system integrity</li>
+        <li><strong>Maintenance logs</strong> — historical service records for each asset</li>
+        <li><strong>Technician notes</strong> — field observations that enrich AI context</li>
+      </ul>
+      <p>All data flows through <strong>Microsoft Azure IoT Hub</strong> into the ML pipeline for anomaly detection.</p>
+    `
+  },
+  {
+    id: 'azure',
+    label: 'Microsoft Azure Platform',
+    keywords: ['azure','microsoft','cloud','platform','why azure','infrastructure','ml studio','iot hub','anomaly','vendor','technology'],
+    response: () => `
+      <strong>Why Microsoft Azure?</strong>
+      <p>Azure was selected as the preferred platform for several strategic reasons:</p>
+      <ul>
+        <li><strong>Azure IoT Hub</strong> — enterprise-grade ingestion of sensor data at scale</li>
+        <li><strong>Azure ML Studio</strong> — model training and deployment for predictive analytics</li>
+        <li><strong>Azure Anomaly Detector</strong> — pre-built API for time-series anomaly detection</li>
+        <li><strong>Azure Power BI</strong> — interactive dashboards for planners, managers, and investors</li>
+        <li><strong>Security &amp; compliance</strong> — ISO 27001, SOC 2, and Australian data sovereignty met</li>
+        <li><strong>Scalability</strong> — handles Fortescue's global multi-site asset fleet</li>
+      </ul>
+      <p>Azure was preferred over IBM AIOps due to stronger integration with Fortescue's existing Microsoft licensing and lower total cost of ownership.</p>
+    `
+  },
+  {
+    id: 'downtime',
+    label: 'Downtime Reduction',
+    keywords: ['downtime','reduce','reduction','uptime','availability','halt','efficiency','prevent','less downtime','operational'],
+    response: () => `
+      <strong>How This AI System Reduces Downtime</strong>
+      <p>The system targets downtime reduction through three core mechanisms:</p>
+      <ul>
+        <li><span class="tag">Early Warning</span> Risk scores are calculated continuously. If a haul truck's vibration deviates from its healthy baseline, the AI flags it <em>before</em> mechanical failure — giving planners time to act.</li>
+        <li><span class="tag">Planned Intervention</span> Instead of emergency shutdowns, maintenance is scheduled within a recommended window, minimising production disruption.</li>
+        <li><span class="tag">Root Cause Insights</span> The system identifies which subsystem is degrading so technicians arrive prepared with the right parts and diagnosis.</li>
+      </ul>
+      <p>Primary KPI target: <strong>≥10% reduction in unplanned downtime</strong> within 12 months of deployment.</p>
+    `
+  },
+  {
+    id: 'investor',
+    label: 'Investor Benefits',
+    keywords: ['investor','investment','superannuation','super fund','shareholder','return','roi','confidence','financial','revenue','profit','fund'],
+    response: () => `
+      <strong>Why This Matters to Investors &amp; Super Funds</strong>
+      <ul>
+        <li>📉 <strong>Lower operational disruption risk</strong> — fewer unplanned shutdowns protect revenue continuity</li>
+        <li>📊 <strong>Improved earnings reliability</strong> — predictable maintenance cycles support financial forecasting</li>
+        <li>🏗️ <strong>Better asset lifecycle management</strong> — extending equipment life reduces capital expenditure</li>
+        <li>🌱 <strong>ESG alignment</strong> — reduced emergency runs and over-maintenance lower carbon output per tonne</li>
+        <li>💡 <strong>Digital transformation credibility</strong> — demonstrates commitment to tech-led operations</li>
+        <li>🛡️ <strong>Stronger risk management</strong> — systematic, data-driven decisions reduce human error</li>
+      </ul>
+      <p>Particularly well-aligned with ESG-focused and long-term institutional investors and superannuation funds.</p>
+    `
+  },
+  {
+    id: 'risks',
+    label: 'Risks & Limitations',
+    keywords: ['risk','limitation','downside','concern','accuracy','error','false positive','wrong','fail','drawback','caveat'],
+    response: () => `
+      <strong>Risks and Limitations — Honest Assessment</strong>
+      <p>Any AI system must be evaluated with a balanced view. Key limitations of this platform:</p>
+      <ul>
+        <li>⚠️ <strong>Data quality dependency</strong> — the AI is only as good as the sensor data it receives</li>
+        <li>⚠️ <strong>Probabilistic outputs</strong> — false positives and missed faults are both possible</li>
+        <li>⚠️ <strong>Human validation required</strong> — all recommendations must be reviewed by qualified engineers before action</li>
+        <li>⚠️ <strong>Integration complexity</strong> — connecting to legacy OT/SCADA systems takes time and specialist expertise</li>
+        <li>⚠️ <strong>Change management</strong> — field technician and planner adoption is critical to delivering value</li>
+        <li>⚠️ <strong>This is a prototype</strong> — all current data is simulated. Real deployment requires rigorous testing and governance</li>
+      </ul>
+    `
+  },
+  {
+    id: 'sustainability',
+    label: 'Sustainability / ESG',
+    keywords: ['sustainability','green','environment','esg','carbon','emission','net zero','climate','renewable','energy','scope','decarbonise','real zero'],
+    response: () => `
+      <strong>Sustainability &amp; Real Zero Benefits</strong>
+      <p>Fortescue targets <strong>real zero Scope 1 and 2 emissions by 2030</strong> — no carbon offsets. Predictive maintenance directly supports this commitment:</p>
+      <ul>
+        <li>🌱 <strong>Fewer emergency runs</strong> — diesel haul trucks idling during unplanned repairs add avoidable emissions</li>
+        <li>♻️ <strong>Longer equipment life</strong> — well-maintained assets last longer, reducing replacement energy and material costs</li>
+        <li>📊 <strong>Better sustainability reporting</strong> — real-time data improves Scope 1 carbon reporting accuracy</li>
+        <li>🔋 <strong>Green fleet integration</strong> — the platform extends to battery-electric and hydrogen-powered assets as Fortescue decarbonises</li>
+      </ul>
+      <p>This makes the platform relevant not just operationally but as part of Fortescue's broader green energy strategy.</p>
+    `
+  },
+  {
+    id: 'score',
+    label: 'Failure Risk Score',
+    keywords: ['score','risk score','failure score','rating','probability','likelihood','predict','forecast','0 to 100','how is risk calculated'],
+    response: () => `
+      <strong>How the Failure Risk Score Works</strong>
+      <p>The AI calculates a <strong>Failure Risk Score from 0 to 100</strong> per monitored asset, updated continuously each shift:</p>
+      <ul>
+        <li><span class="tag">0–30</span> <strong style="color:#00C853">Low Risk</strong> — Normal parameters. Standard scheduled maintenance applies.</li>
+        <li><span class="tag">31–65</span> <strong style="color:#ffb800">Medium Risk</strong> — Elevated anomaly signals. Plan intervention within 5–7 days.</li>
+        <li><span class="tag">66–100</span> <strong style="color:#ff4444">High Risk</strong> — Significant deviation. Immediate inspection within 24–48 hours.</li>
+      </ul>
+      <p>The score is derived from a weighted combination of sensor anomaly severities, historical failure patterns, asset age, and recent maintenance history. Try the simulator on the left to see scores in action.</p>
+    `
+  },
+  {
+    id: 'human',
+    label: 'Human Role / Oversight',
+    keywords: ['human','expert','engineer','technician','planner','decision','replace','automate','role','who decides','manual','oversight'],
+    response: () => `
+      <strong>The Human Role in This AI System</strong>
+      <p>This system is a <strong>decision-support tool, not an autonomous decision-maker</strong>. Human expertise remains central at every stage:</p>
+      <ul>
+        <li>🧑‍🔧 <strong>Maintenance planners</strong> receive AI alerts and risk scores. They decide whether and when to act.</li>
+        <li>🧑‍💼 <strong>Managers</strong> use Power BI dashboards to review fleet health trends and allocate resources.</li>
+        <li>🔬 <strong>Engineers</strong> validate AI recommendations using domain knowledge before approving any intervention.</li>
+        <li>👷 <strong>Field technicians</strong> carry out physical maintenance informed by AI-generated diagnostic insights.</li>
+      </ul>
+      <p>The AI accelerates human decision-making by surfacing the right information at the right time — it never replaces expert authority.</p>
+    `
+  },
+  {
+    id: 'cost',
+    label: 'Cost & Business Value',
+    keywords: ['cost','saving','expensive','budget','capex','opex','spend','worth','value','benefit','price','afford','business case'],
+    response: () => `
+      <strong>Cost and Business Value</strong>
+      <p>The business case for predictive maintenance at Fortescue's scale is compelling:</p>
+      <ul>
+        <li>💰 <strong>Lower unplanned maintenance costs</strong> — emergency repairs are significantly more expensive than planned servicing</li>
+        <li>📦 <strong>Reduced spare parts waste</strong> — parts ordered when needed, not speculatively stockpiled</li>
+        <li>⏱️ <strong>Shorter MTTR</strong> — technicians arrive prepared with the right diagnosis and parts</li>
+        <li>🏗️ <strong>Extended asset lifespan</strong> — timely maintenance prevents cumulative damage</li>
+        <li>📈 <strong>Improved throughput</strong> — fewer unplanned stops means more ore moved per operational period</li>
+      </ul>
+      <p>ROI is estimated within the first <strong>24 months</strong> of deployment at Fortescue's operating scale.</p>
+    `
+  },
+  {
+    id: 'reports_links',
+    label: 'Reports / Links / Current Info',
+    keywords: ['report','reports','current','latest','annual report','esg report','sustainability report','progress','where can i find','find','link','website','fortescue website','investor relations','disclosure','filing','published','documents','download','access'],
+    response: () => `
+      <strong>Fortescue Reports &amp; Official Resources</strong>
+      <p>Here are the key links to Fortescue's publicly available reports and disclosures:</p>
+      <ul>
+        <li>🌱 <strong>Sustainability &amp; ESG Reports</strong><br>
+          <a href="https://www.fortescue.com/en/sustainability" target="_blank" rel="noopener noreferrer">fortescue.com/en/sustainability</a>
+        </li>
+        <li>📊 <strong>Investor Relations — Annual Reports &amp; ASX Filings</strong><br>
+          <a href="https://www.fortescue.com/en/investors" target="_blank" rel="noopener noreferrer">fortescue.com/en/investors</a>
+        </li>
+        <li>📰 <strong>Latest News &amp; Media Releases</strong><br>
+          <a href="https://www.fortescue.com/en/media" target="_blank" rel="noopener noreferrer">fortescue.com/en/media</a>
+        </li>
+      </ul>
+      <p>All links open Fortescue's official website in a new tab. For ASX filings, the investor relations page also links through to the ASX announcements portal.</p>
+    `
+  },
+  {
+    id: 'demo',
+    label: 'Demo / Simulator',
+    keywords: ['demo','simulate','simulator','show','example','try','test','sample','demonstrate','risk simulator','interactive'],
+    response: () => `
+      <strong>Equipment Risk Simulator</strong>
+      <p>Try the live risk simulator in the panel on the left. Select one of four asset types:</p>
+      <ul>
+        <li>🚛 <strong>Haul Truck</strong> — CAT 793, Fleet #HT-047</li>
+        <li>🏭 <strong>Conveyor</strong> — CV-12, Solomon Hub</li>
+        <li>🚂 <strong>Rail Asset</strong> — Locomotive RL-204</li>
+        <li>⚙️ <strong>Fixed Plant</strong> — Crusher FP-003, Christmas Creek</li>
+      </ul>
+      <p>Each shows a <strong>simulated failure risk score</strong>, condition status, recommended intervention window, and suggested action — matching what a Fortescue maintenance planner would see in the NOC dashboard.</p>
+      <p><em>Note: All outputs are simulated for demonstration purposes only.</em></p>
+    `
+  }
+];
+
+const FALLBACK_SUGGESTIONS = [
+  "What problem does this AI system solve?",
+  "How does predictive maintenance work?",
+  "How does this benefit investors?",
+  "What data does the system use?",
+  "Why use Microsoft Azure?",
+  "What are the risks of this AI system?",
+  "How does this support sustainability?",
+  "How does the failure risk score work?",
+  "What is the role of human experts?",
+  "Where can I find Fortescue's current reports?"
+];
+
+// ============================================================
+// INTENT DETECTION ENGINE
+// ============================================================
+function detectIntent(text) {
+  const lower = text.toLowerCase().trim();
+  let best = null, bestScore = 0;
+  for (const intent of INTENTS) {
+    let score = 0;
+    for (const kw of intent.keywords) {
+      if (lower.includes(kw.toLowerCase())) score++;
+    }
+    if (score > bestScore) { bestScore = score; best = intent; }
+  }
+  return bestScore >= 1 ? best : null;
+}
+
+// ============================================================
+// ASSET SIMULATOR DATA
+// ============================================================
+const assets = {
+  'haul-truck': {
+    name: 'CAT 793 Haul Truck — Fleet #HT-047', risk: 74,
+    condition: 'ELEVATED RISK', window: '18–36 hrs',
+    sensor: '⚠️ Vibration anomaly on left rear bearing',
+    action: 'Schedule bearing inspection within 24 hours. Recommend oil sample analysis.',
+    color: '#ffb800', actionBg: 'rgba(255,184,0,0.08)', actionBorder: '#ffb800'
+  },
+  'conveyor': {
+    name: 'Overland Conveyor — CV-12 (Solomon Hub)', risk: 31,
+    condition: 'NOMINAL', window: '7–14 days',
+    sensor: '✅ Belt tension and roller temp within range',
+    action: 'Continue scheduled monitoring. Next full inspection: 9 days.',
+    color: '#00C853', actionBg: 'rgba(0,200,83,0.08)', actionBorder: '#00C853'
+  },
+  'rail': {
+    name: 'Rail Locomotive — RL-204 (Pilbara Rail)', risk: 88,
+    condition: 'HIGH RISK', window: '4–12 hrs',
+    sensor: '🚨 Wheel flange wear beyond threshold + brake anomaly',
+    action: 'IMMEDIATE: Remove from service for inspection. Do not operate until cleared.',
+    color: '#ff4444', actionBg: 'rgba(255,68,68,0.08)', actionBorder: '#ff4444'
+  },
+  'fixed-plant': {
+    name: 'Crusher Unit — FP-003 (Christmas Creek)', risk: 52,
+    condition: 'MODERATE RISK', window: '3–5 days',
+    sensor: '⚠️ Motor temperature trending upward (+4°C over 48hrs)',
+    action: 'Flag for priority maintenance check. Monitor temperature every 2 hours.',
+    color: '#ff8c00', actionBg: 'rgba(255,140,0,0.08)', actionBorder: '#ff8c00'
+  }
+};
+
+function selectAsset(id) {
+  document.querySelectorAll('.asset-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-' + id).classList.add('active');
+  const a = assets[id];
+  const display = document.getElementById('riskDisplay');
+  display.classList.add('visible');
+  display.innerHTML = `
+    <div class="risk-asset-name">${a.name}</div>
+    <div class="risk-bar-wrap">
+      <div class="risk-bar-label"><span>RISK SCORE</span><span class="val" style="color:${a.color}">${a.risk}/100</span></div>
+      <div class="risk-bar-track"><div class="risk-bar-fill" id="riskFill" style="width:0%;background:${a.color}"></div></div>
+    </div>
+    <div class="risk-meta">
+      <div class="risk-meta-item"><div class="rmi-label">CONDITION</div><div class="rmi-val" style="color:${a.color}">${a.condition}</div></div>
+      <div class="risk-meta-item"><div class="rmi-label">INTERVENTION WINDOW</div><div class="rmi-val">${a.window}</div></div>
+    </div>
+    <div class="risk-meta" style="margin-top:6px">
+      <div class="risk-meta-item" style="grid-column:1/-1"><div class="rmi-label">SENSOR SIGNAL</div><div class="rmi-val" style="font-size:10px;line-height:1.4">${a.sensor}</div></div>
+    </div>
+    <div class="risk-action" style="background:${a.actionBg};border-color:${a.actionBorder};color:${a.color}">${a.action}</div>
+  `;
+  setTimeout(() => { const f = document.getElementById('riskFill'); if(f) f.style.width = a.risk + '%'; }, 50);
+}
+
+// ============================================================
+// CHAT UI
+// ============================================================
+let isLoading = false;
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function sendQuick(text) {
+  document.getElementById('chatInput').value = text;
+  sendMessage();
+}
+
+function formatTime() {
+  return new Date().toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+}
+
+function addMessage(role, htmlContent) {
+  const welcome = document.getElementById('welcomeState');
+  if (welcome) welcome.remove();
+
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+
+  const avatar = role === 'bot'
+    ? `<div class="msg-avatar">F</div>`
+    : `<div class="msg-avatar">YOU</div>`;
+
+  const bubbleContent = role === 'user'
+    ? `<p>${htmlContent.replace(/\n/g,'<br>')}</p>`
+    : htmlContent;
+
+  div.innerHTML = `
+    ${avatar}
+    <div>
+      <div class="msg-bubble">${bubbleContent}</div>
+      <div class="msg-meta">${role === 'bot' ? 'FORTESCUE AI · INTENT ENGINE' : 'YOU'} · ${formatTime()}</div>
+    </div>
+  `;
+
+  // Wire suggestion chips
+  div.querySelectorAll('.suggest-chip').forEach(chip => {
+    chip.addEventListener('click', () => { if (chip.dataset.q) sendQuick(chip.dataset.q); });
+  });
+
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function showTyping() {
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'typing-indicator'; div.id = 'typingIndicator';
+  div.innerHTML = `<div class="typing-avatar">F</div><div class="typing-dots"><span></span><span></span><span></span></div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function removeTyping() {
+  const el = document.getElementById('typingIndicator');
+  if (el) el.remove();
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text || isLoading) return;
+
+  input.value = ''; input.style.height = 'auto';
+  isLoading = true;
+
+  addMessage('user', text);
+  showTyping();
+
+  // Simulate a short thinking delay so it feels natural
+  await new Promise(r => setTimeout(r, Math.min(500 + text.length * 6, 1400)));
+  removeTyping();
+
+  const matched = detectIntent(text);
+
+  if (matched) {
+    addMessage('bot', matched.response());
+  } else {
+    const picks = [...FALLBACK_SUGGESTIONS].sort(() => Math.random() - 0.5).slice(0, 3);
+    const chips = picks.map(q => `<button class="suggest-chip" data-q="${q}">→ ${q}</button>`).join('');
+    addMessage('bot', `
+      <p>I'm not sure I have a specific answer to that. Here are some things I can help with:</p>
+      <div class="suggestions">${chips}</div>
+    `);
+  }
+
+  isLoading = false;
+  document.getElementById('chatInput').focus();
+}
+</script>
+</body>
+</html>
